@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { prisma } from "../config/prisma.js";
 
 export const healthRouter = Router();
 
@@ -12,3 +13,20 @@ healthRouter.get("/health", (_request, response) => {
     },
   });
 });
+
+healthRouter.get(
+  "/health/database",
+  async (_request, response, next) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+
+      response.status(200).json({
+        success: true,
+        message: "RepairTrack database connection is healthy",
+        data: null,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
