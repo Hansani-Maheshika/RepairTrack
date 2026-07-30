@@ -7,8 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "dev",
-    "typecheck": "tsc --noEmit"
+    "start": "npm run typecheckdev",
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
