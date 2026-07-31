@@ -12,6 +12,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
+    "seed:demo": "tsx prisma/seedDemo.ts",
     "tokens:cleanup": "tsx src/scripts/cleanupTokens.ts",
     "test": "vitest run tests/unit",
     "test:integration": "node tests/runIntegration.mjs"

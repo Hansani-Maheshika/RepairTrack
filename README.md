@@ -42,6 +42,7 @@ Security note: npm currently reports a React Router advisory for RSC/server-acti
 - `npm run test:integration` — real PostgreSQL API integration tests
 - `npm run build` / `npm start` — production build and server
 - `npm run seed` — create/update the three initial staff accounts
+- `npm run seed:demo` — safely create reusable sample customers, devices and repairs
 - `npm run tokens:cleanup` — remove expired and revoked refresh sessions
 - `npx prisma migrate deploy` — apply committed database migrations
 
