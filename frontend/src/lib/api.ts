@@ -2,7 +2,7 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import type { ApiResponse, AuthSession } from '../types/auth'
 import { getAccessToken, setAccessToken } from './tokenStore'
 
-const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:5001/api/v1'
+const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api/v1'
 
 export const api = axios.create({ baseURL, withCredentials: true })
 const sessionApi = axios.create({ baseURL, withCredentials: true })
