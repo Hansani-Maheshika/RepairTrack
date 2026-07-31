@@ -33,7 +33,7 @@ app.use("/api/v1", healthRouter);
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/devices", deviceRouter);
-
+app.use("/api/v1/repairs", repairRouter);
 
 
 app.use(notFoundHandler);
