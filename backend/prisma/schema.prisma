@@ -13,17 +13,167 @@ enum Role {
   TECHNICIAN
 }
 
+enum DeviceType {
+  LAPTOP
+  DESKTOP
+  MOBILE_PHONE
+  TABLET
+  PRINTER
+  OTHER
+}
+
+enum RepairPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum RepairStatus {
+  DEVICE_RECEIVED
+  UNDER_INSPECTION
+  WAITING_FOR_CUSTOMER_APPROVAL
+  REPAIR_APPROVED
+  REPAIR_REJECTED
+  WAITING_FOR_SPARE_PARTS
+  REPAIR_IN_PROGRESS
+  TESTING
+  READY_FOR_COLLECTION
+  COMPLETED
+  COLLECTED
+  CANCELLED
+}
+
 model User {
-  id           String   @id @default(uuid())
-  staffCode    String   @unique
+  id           String  @id @default(uuid())
+  staffCode    String  @unique
   fullName     String
-  email        String   @unique
+  email        String  @unique
   passwordHash String
   role         Role
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive     Boolean @default(true)
+
+  createdRepairs  RepairJob[]           @relation("RepairCreatedBy")
+  assignedRepairs RepairJob[]           @relation("RepairAssignedTechnician")
+  statusUpdates   RepairStatusHistory[] @relation("StatusUpdatedBy")
+  refreshTokens   RefreshToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([role])
   @@index([isActive])
+}
+
+model Customer {
+  id           String  @id @default(uuid())
+  customerCode String  @unique
+  name         String
+  phone        String
+  email        String?
+  address      String?
+
+  devices    Device[]
+  repairJobs RepairJob[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([phone])
+}
+
+model Device {
+  id           String     @id @default(uuid())
+  deviceCode   String     @unique
+  customerId   String
+  deviceType   DeviceType
+  brand        String
+  model        String
+  serialNumber String?
+  colour       String?
+  condition    String?
+  accessories  String[]   @default([])
+
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  repairJobs RepairJob[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([serialNumber])
+}
+
+model RepairJob {
+  id                   String  @id @default(uuid())
+  repairNumber         String  @unique
+  customerId           String
+  deviceId             String
+  createdById          String
+  assignedTechnicianId String?
+
+  reportedProblem String
+  priority        RepairPriority @default(NORMAL)
+  status          RepairStatus   @default(DEVICE_RECEIVED)
+
+  inspectionFindings      String?
+  internalNotes           String?
+  estimatedCost           Decimal?  @db.Decimal(12, 2)
+  estimatedCompletionDate DateTime?
+
+  receivedAt  DateTime  @default(now())
+  completedAt DateTime?
+  collectedAt DateTime?
+
+  customer           Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  device             Device   @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  createdBy          User     @relation("RepairCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTechnician User?    @relation("RepairAssignedTechnician", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
+
+  statusHistory RepairStatusHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([deviceId])
+  @@index([createdById])
+  @@index([assignedTechnicianId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model RepairStatusHistory {
+  id           String       @id @default(uuid())
+  repairJobId  String
+  status       RepairStatus
+  publicNote   String?
+  internalNote String?
+  updatedById  String
+
+  repairJob RepairJob @relation(fields: [repairJobId], references: [id], onDelete: Restrict)
+  updatedBy User      @relation("StatusUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([repairJobId])
+  @@index([updatedById])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
