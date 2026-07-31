@@ -40,6 +40,17 @@ app.use(
 app.use(cookieParser());
 app.use(pinoHttp());
 
+app.get("/", (_request, response) => {
+  response.status(200).json({
+    success: true,
+    message: "RepairTrack API is running",
+    data: {
+      health: "/api/v1/health",
+      databaseHealth: "/api/v1/health/database",
+    },
+  });
+});
+
 app.use("/api/v1", healthRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/customers", customerRouter);
