@@ -1,26 +1,29 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { LoginPage } from './pages/auth/LoginPage'
+import { CustomerDetailsPage, CustomersPage, EditCustomerPage, NewCustomerPage } from './pages/customers/CustomerPages'
+import { AdminDashboard } from './pages/dashboard/AdminDashboard'
 import { RoleDashboard } from './pages/dashboard/RoleDashboard'
+import { DeviceDetailsPage, DevicesPage, EditDevicePage, NewDevicePage } from './pages/devices/DevicePages'
 import { HomePage } from './pages/public/HomePage'
+import { TrackRepairPage } from './pages/public/TrackRepairPage'
+import { NewRepairPage, RepairDetailsPage, RepairsPage } from './pages/repairs/RepairPages'
 import { MessagePage } from './pages/shared/MessagePage'
+import { StaffPage } from './pages/staff/StaffPages'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 
-export default function App() {
-  return <Routes>
-    <Route path="/" element={<HomePage />} />
-    <Route path="/login" element={<LoginPage />} />
-    <Route path="/track" element={<MessagePage title="Track a repair" message="Public tracking will be connected in a later step." />} />
-    <Route path="/unauthorized" element={<MessagePage title="Access denied" message="Your account is not allowed to open that page." />} />
-
-    <Route element={<ProtectedRoute />}><Route element={<DashboardLayout />}>
-      <Route element={<ProtectedRoute roles={['ADMIN']} />}><Route path="/admin/dashboard" element={<RoleDashboard />} /></Route>
-      <Route element={<ProtectedRoute roles={['RECEPTIONIST']} />}><Route path="/receptionist/dashboard" element={<RoleDashboard />} /></Route>
-      <Route element={<ProtectedRoute roles={['TECHNICIAN']} />}><Route path="/technician/dashboard" element={<RoleDashboard />} /></Route>
-      <Route element={<ProtectedRoute roles={['ADMIN', 'RECEPTIONIST']} />}><Route path="/customers" element={<MessagePage title="Customers" message="Customer management is the next frontend step." />} /></Route>
-      <Route path="/repairs" element={<MessagePage title="Repairs" message="Repair management will be connected after customers and devices." />} />
-    </Route></Route>
-    <Route path="*" element={<MessagePage title="Page not found" message="The requested page does not exist." />} />
-    <Route path="/dashboard" element={<Navigate to="/login" replace />} />
-  </Routes>
-}
+export default function App(){return <Routes>
+  <Route path="/" element={<HomePage/>}/><Route path="/login" element={<LoginPage/>}/><Route path="/track" element={<TrackRepairPage/>}/><Route path="/unauthorized" element={<MessagePage title="Access denied" message="Your account is not allowed to open that page."/>}/>
+  <Route element={<ProtectedRoute/>}><Route element={<DashboardLayout/>}>
+    <Route element={<ProtectedRoute roles={['ADMIN']}/>}><Route path="/admin/dashboard" element={<AdminDashboard/>}/><Route path="/admin/staff" element={<StaffPage/>}/></Route>
+    <Route element={<ProtectedRoute roles={['RECEPTIONIST']}/>}><Route path="/receptionist/dashboard" element={<RoleDashboard/>}/></Route>
+    <Route element={<ProtectedRoute roles={['TECHNICIAN']}/>}><Route path="/technician/dashboard" element={<RoleDashboard/>}/></Route>
+    <Route element={<ProtectedRoute roles={['ADMIN','RECEPTIONIST']}/>}>
+      <Route path="/customers" element={<CustomersPage/>}/><Route path="/customers/new" element={<NewCustomerPage/>}/><Route path="/customers/:id" element={<CustomerDetailsPage/>}/><Route path="/customers/:id/edit" element={<EditCustomerPage/>}/>
+      <Route path="/devices" element={<DevicesPage/>}/><Route path="/devices/new" element={<NewDevicePage/>}/><Route path="/devices/:id" element={<DeviceDetailsPage/>}/><Route path="/devices/:id/edit" element={<EditDevicePage/>}/>
+      <Route path="/repairs/new" element={<NewRepairPage/>}/>
+    </Route>
+    <Route path="/repairs" element={<RepairsPage/>}/><Route path="/repairs/:id" element={<RepairDetailsPage/>}/>
+  </Route></Route>
+  <Route path="/dashboard" element={<Navigate to="/login" replace/>}/><Route path="*" element={<MessagePage title="Page not found" message="The requested page does not exist."/>}/>
+</Routes>}

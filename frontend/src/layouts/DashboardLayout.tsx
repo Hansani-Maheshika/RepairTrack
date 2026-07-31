@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, Menu, Users, Wrench, X } from 'lucide-react'
+import { HardDrive, LayoutDashboard, LogOut, Menu, UserCog, Users, Wrench, X } from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
@@ -10,8 +10,12 @@ export function DashboardLayout() {
   const navigate = useNavigate()
   if (!user) return null
   const links = [{ to: `/${user.role.toLowerCase()}/dashboard`, label: 'Dashboard', icon: LayoutDashboard }]
-  if (user.role !== 'TECHNICIAN') links.push({ to: '/customers', label: 'Customers', icon: Users })
+  if (user.role !== 'TECHNICIAN') {
+    links.push({ to: '/customers', label: 'Customers', icon: Users })
+    links.push({ to: '/devices', label: 'Devices', icon: HardDrive })
+  }
   links.push({ to: '/repairs', label: user.role === 'TECHNICIAN' ? 'My repairs' : 'Repairs', icon: Wrench })
+  if (user.role === 'ADMIN') links.push({ to: '/admin/staff', label: 'Staff', icon: UserCog })
 
   async function signOut() { await logout(); toast.success('Logged out successfully'); navigate('/login', { replace: true }) }
   return <div className="min-h-screen bg-slate-100">

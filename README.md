@@ -19,6 +19,21 @@ Set a secure `SEED_USER_PASSWORD` before seeding. The seed creates admin, recept
 
 Alternatively, set secure secrets in `docker-compose.yml` and run `docker compose up --build`.
 
+## Frontend setup
+
+```powershell
+cd frontend
+Copy-Item .env.example .env
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`. Set `VITE_API_URL` to the running backend API, for example `http://localhost:5001/api/v1`.
+
+The completed MVP frontend includes role-based login and navigation, customer and device management, repair intake and status history, technician assignments and inspections, public tracking, staff administration, and the admin dashboard. Quotations, inventory, invoices, and payments are future modules because they are not part of the current API/database schema.
+
+Security note: npm currently reports a React Router advisory for RSC/server-action mode. RepairTrack is a client-only Vite SPA and does not use that mode; keep the router updated when a patched release is published.
+
 ## Commands
 
 - `npm run dev` — development server
@@ -29,6 +44,8 @@ Alternatively, set secure secrets in `docker-compose.yml` and run `docker compos
 - `npm run seed` — create/update the three initial staff accounts
 - `npm run tokens:cleanup` — remove expired and revoked refresh sessions
 - `npx prisma migrate deploy` — apply committed database migrations
+
+Frontend verification commands are `npm run lint`, `npm test`, and `npm run build` from the `frontend` folder.
 
 Use a separate database in `DATABASE_URL` when running integration tests outside CI.
 
