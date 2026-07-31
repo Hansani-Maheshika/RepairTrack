@@ -9,6 +9,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFound.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { authRouter } from "./routes/auth.routes.js";
+
 const app = express();
 
 app.disable("x-powered-by");
@@ -31,9 +32,9 @@ app.use("/api/v1", healthRouter);
 
 
 app.use("/api/v1/auth", authRouter);
-
-
-
+app.use("/api/v1/devices", deviceRouter);
+app.use("/api/v1/repairs", repairRouter);
+app.use("/api/v1/public", publicRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
