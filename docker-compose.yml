@@ -1,0 +1,35 @@
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: repairtrack
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: repairtrack_local
+    volumes:
+      - repairtrack_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d repairtrack"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://postgres:repairtrack_local@database:5432/repairtrack?schema=public
+      JWT_ACCESS_SECRET: change_this_access_secret_before_deployment_123456
+      JWT_REFRESH_SECRET: change_this_refresh_secret_before_deployment_654321
+      ACCESS_TOKEN_EXPIRES_IN: 15m
+      REFRESH_TOKEN_EXPIRES_IN: 7d
+      CLIENT_URL: http://localhost:5173
+    command: ["sh", "-c", "npx prisma migrate deploy && npm start"]
+    ports:
+      - "5000:5000"
+
+volumes:
+  repairtrack_postgres:

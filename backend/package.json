@@ -4,12 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "npm run typecheckdev",
-    "typecheck": "tsc --noEmit",
-    "seed": "tsx prisma/seed.ts"
+    "build": "prisma generate && tsc",
+    "start": "node dist/server.js",
+    "typecheck": "prisma generate && tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "seed": "tsx prisma/seed.ts",
+    "tokens:cleanup": "tsx src/scripts/cleanupTokens.ts",
+    "test": "vitest run tests/unit",
+    "test:integration": "node tests/runIntegration.mjs"
   },
   "keywords": [],
   "author": "",

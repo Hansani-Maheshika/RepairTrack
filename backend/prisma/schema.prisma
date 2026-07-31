@@ -177,3 +177,9 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
 }
+
+model CodeSequence {
+  key       String   @id
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}

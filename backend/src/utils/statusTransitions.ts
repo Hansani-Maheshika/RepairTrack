@@ -1,0 +1,20 @@
+import type { RepairStatus } from "../generated/prisma/client.js";
+
+const transitions: Record<RepairStatus, readonly RepairStatus[]> = {
+  DEVICE_RECEIVED: ["UNDER_INSPECTION", "CANCELLED"],
+  UNDER_INSPECTION: ["WAITING_FOR_CUSTOMER_APPROVAL", "REPAIR_IN_PROGRESS", "CANCELLED"],
+  WAITING_FOR_CUSTOMER_APPROVAL: ["REPAIR_APPROVED", "REPAIR_REJECTED", "CANCELLED"],
+  REPAIR_APPROVED: ["WAITING_FOR_SPARE_PARTS", "REPAIR_IN_PROGRESS", "CANCELLED"],
+  REPAIR_REJECTED: ["CANCELLED"],
+  WAITING_FOR_SPARE_PARTS: ["REPAIR_IN_PROGRESS", "CANCELLED"],
+  REPAIR_IN_PROGRESS: ["WAITING_FOR_SPARE_PARTS", "TESTING", "CANCELLED"],
+  TESTING: ["REPAIR_IN_PROGRESS", "READY_FOR_COLLECTION"],
+  READY_FOR_COLLECTION: ["COMPLETED", "COLLECTED"],
+  COMPLETED: ["COLLECTED"],
+  COLLECTED: [],
+  CANCELLED: [],
+};
+
+export function canTransition(from: RepairStatus, to: RepairStatus): boolean {
+  return transitions[from].includes(to);
+}
