@@ -1,6 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { LockKeyhole, Wrench } from 'lucide-react'
-import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -16,12 +15,10 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>
 
 export function LoginPage() {
-  const { user, login } = useAuth()
+  const { user, login, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginValues>({ resolver: zodResolver(loginSchema) })
-
-  useEffect(() => { if (user) navigate(roleHome(user.role), { replace: true }) }, [user, navigate])
 
   async function submit(values: LoginValues) {
     try {
@@ -30,6 +27,19 @@ export function LoginPage() {
       const requested = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname
       navigate(requested ?? roleHome(loggedInUser.role), { replace: true })
     } catch (error) { toast.error(getApiErrorMessage(error)) }
+  }
+
+  if (user) {
+    return <main className="grid min-h-screen place-items-center bg-slate-100 p-6">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl shadow-slate-200">
+        <div className="mx-auto flex w-fit items-center gap-2 text-xl font-bold"><Wrench className="text-cyan-600"/>RepairTrack</div>
+        <h1 className="mt-8 text-2xl font-bold text-slate-950">You are already signed in</h1>
+        <p className="mt-2 text-slate-600">{user.fullName} · {user.role.replace('_', ' ')}</p>
+        <button className="mt-7 w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white hover:bg-slate-800" onClick={()=>navigate(roleHome(user.role))}>Continue to dashboard</button>
+        <button className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-3 font-semibold hover:bg-slate-50" onClick={async()=>{await logout();toast.success('You can now sign in with another account')}}>Sign out and switch account</button>
+        <Link className="mt-6 block text-sm text-cyan-700 hover:underline" to="/">Return to home page</Link>
+      </div>
+    </main>
   }
 
   return <main className="grid min-h-screen bg-slate-100 lg:grid-cols-2">
