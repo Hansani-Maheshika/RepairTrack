@@ -6,7 +6,7 @@ import { prisma } from "../config/prisma.js";
 import { env } from "../config/env.js";
 import { sendCustomerMessage } from "../services/notification.service.js";
 import { AppError } from "../utils/AppError.js";
-import rateLimit from "express-rate-limit";
+import { rateLimit } from "express-rate-limit";
 
 export const passwordResetRouter = Router();
 const passwordResetRateLimiter = rateLimit({
