@@ -2,7 +2,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import { resolve } from "node:path";
-import helmet from "helmet";
+import * as helmetModule from "helmet";
 import { pinoHttp } from "pino-http";
 
 import { env } from "./config/env.js";
@@ -22,6 +22,7 @@ import { attachmentRouter } from "./routes/attachment.routes.js";
 import { passwordResetRouter } from "./routes/passwordReset.routes.js";
 
 const app = express();
+const helmet = helmetModule.default;
 
 app.disable("x-powered-by");
 if (env.NODE_ENV === "production") app.set("trust proxy", 1);
