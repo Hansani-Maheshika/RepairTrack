@@ -232,10 +232,10 @@ export function RepairBusinessPanel({
 }
 
 async function prepareUploadImage(file: File): Promise<File> {
-  const maxBytes = 3.5 * 1024 * 1024;
+  const maxBytes = 600 * 1024;
   if (file.size <= maxBytes) return file;
   const image = await createImageBitmap(file);
-  const scale = Math.min(1, 2048 / Math.max(image.width, image.height));
+  const scale = Math.min(1, 1600 / Math.max(image.width, image.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(image.width * scale));
   canvas.height = Math.max(1, Math.round(image.height * scale));
@@ -247,7 +247,7 @@ async function prepareUploadImage(file: File): Promise<File> {
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   image.close();
   const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/jpeg", 0.82),
+    canvas.toBlob(resolve, "image/jpeg", 0.75),
   );
   if (!blob || blob.size > maxBytes)
     throw new Error("Please choose a smaller image");

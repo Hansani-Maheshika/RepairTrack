@@ -89,24 +89,38 @@ attachmentRouter.post(
           api_key: env.CLOUDINARY_API_KEY,
           api_secret: env.CLOUDINARY_API_SECRET,
         });
-        const result = await new Promise<{
-          secure_url: string;
-          public_id: string;
-        }>((resolveUpload, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
-            {
-              folder: `repairtrack/${repair.repairNumber}`,
-              resource_type: "image",
-            },
-            (error, value) =>
-              error || !value
-                ? reject(error ?? new Error("Upload failed"))
-                : resolveUpload(value),
-          );
-          Readable.from(req.file!.buffer).pipe(stream);
-        });
-        fileUrl = result.secure_url;
-        storageKey = result.public_id;
+        try {
+          const result = await Promise.race([
+            new Promise<{
+              secure_url: string;
+              public_id: string;
+            }>((resolveUpload, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                {
+                  folder: `repairtrack/${repair.repairNumber}`,
+                  resource_type: "image",
+                },
+                (error, value) =>
+                  error || !value
+                    ? reject(error ?? new Error("Upload failed"))
+                    : resolveUpload(value),
+              );
+              Readable.from(req.file!.buffer).pipe(stream);
+            }),
+            new Promise<never>((_resolve, reject) =>
+              setTimeout(
+                () => reject(new Error("Cloud image storage timed out")),
+                12_000,
+              ),
+            ),
+          ]);
+          fileUrl = result.secure_url;
+          storageKey = result.public_id;
+        } catch (error) {
+          req.log.warn({ err: error }, "Cloud storage unavailable; using database fallback");
+          fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+          storageKey = `database:${randomUUID()}`;
+        }
       } else {
         const extension: Record<string, string> = {
           "image/jpeg": "jpg",
