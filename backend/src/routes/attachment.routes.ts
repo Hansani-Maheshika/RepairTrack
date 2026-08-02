@@ -97,17 +97,6 @@ attachmentRouter.post(
             {
               folder: `repairtrack/${repair.repairNumber}`,
               resource_type: "image",
-              allowed_formats: ["jpg", "jpeg", "png", "webp"],
-              type: "upload",
-              transformation: [
-                {
-                  width: 4096,
-                  height: 4096,
-                  crop: "limit",
-                  quality: "auto",
-                  flags: "strip_profile",
-                },
-              ],
             },
             (error, value) =>
               error || !value

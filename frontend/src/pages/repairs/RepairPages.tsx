@@ -441,7 +441,10 @@ export function RepairDetailsPage() {
           )}
           {allowed.length > 0 && (
             <StatusForm
-              statuses={allowed}
+              statuses={
+                user?.role === "TECHNICIAN" ? technicianStatuses : allowed
+              }
+              allowedStatuses={allowed}
               busy={busy}
               onSubmit={(status, publicNote) =>
                 action(
@@ -494,14 +497,16 @@ export function RepairDetailsPage() {
 
 function StatusForm({
   statuses,
+  allowedStatuses,
   busy,
   onSubmit,
 }: {
   statuses: RepairStatus[];
+  allowedStatuses?: RepairStatus[];
   busy: boolean;
   onSubmit: (s: RepairStatus, p: string) => Promise<void>;
 }) {
-  const [s, setS] = useState(statuses[0]);
+  const [s, setS] = useState(allowedStatuses?.[0] ?? statuses[0]);
   const [p, setP] = useState("");
   return (
     <form
@@ -519,7 +524,11 @@ function StatusForm({
           onChange={(e) => setS(e.target.value as RepairStatus)}
         >
           {statuses.map((x) => (
-            <option key={x} value={x}>
+            <option
+              key={x}
+              value={x}
+              disabled={allowedStatuses ? !allowedStatuses.includes(x) : false}
+            >
               {label(x)}
             </option>
           ))}
