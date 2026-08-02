@@ -353,8 +353,7 @@ export function RepairDetailsPage() {
     allowed = allowed.filter((s) => ["CANCELLED", "COLLECTED"].includes(s));
   if (user?.role === "ADMIN") allowed = [];
   if (user?.role === "TECHNICIAN") {
-    allowed = allowed.filter((status) => technicianStatuses.includes(status));
-    if (r.status === "WAITING_FOR_CUSTOMER_APPROVAL") allowed = [];
+    allowed = technicianStatuses;
   }
   async function action(path: string, body: unknown, message: string) {
     setBusy(true);
@@ -444,7 +443,6 @@ export function RepairDetailsPage() {
               statuses={
                 user?.role === "TECHNICIAN" ? technicianStatuses : allowed
               }
-              allowedStatuses={allowed}
               busy={busy}
               onSubmit={(status, publicNote) =>
                 action(
@@ -497,16 +495,14 @@ export function RepairDetailsPage() {
 
 function StatusForm({
   statuses,
-  allowedStatuses,
   busy,
   onSubmit,
 }: {
   statuses: RepairStatus[];
-  allowedStatuses?: RepairStatus[];
   busy: boolean;
   onSubmit: (s: RepairStatus, p: string) => Promise<void>;
 }) {
-  const [s, setS] = useState(allowedStatuses?.[0] ?? statuses[0]);
+  const [s, setS] = useState(statuses[0]);
   const [p, setP] = useState("");
   return (
     <form
@@ -524,11 +520,7 @@ function StatusForm({
           onChange={(e) => setS(e.target.value as RepairStatus)}
         >
           {statuses.map((x) => (
-            <option
-              key={x}
-              value={x}
-              disabled={allowedStatuses ? !allowedStatuses.includes(x) : false}
-            >
+            <option key={x} value={x}>
               {label(x)}
             </option>
           ))}

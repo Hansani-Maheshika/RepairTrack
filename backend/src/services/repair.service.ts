@@ -244,6 +244,14 @@ export async function updateRepairStatus(
 ) {
   const repair = await getRepair(id, actor);
   const nextStatus = input.status as RepairStatus;
+  const technicianStatuses: RepairStatus[] = [
+    "DEVICE_RECEIVED",
+    "WAITING_FOR_CUSTOMER_APPROVAL",
+    "WAITING_FOR_SPARE_PARTS",
+    "REPAIR_IN_PROGRESS",
+    "COMPLETED",
+    "CANCELLED",
+  ];
   if (
     actor.role === "TECHNICIAN" &&
     repair.status === "WAITING_FOR_CUSTOMER_APPROVAL" &&
@@ -254,7 +262,9 @@ export async function updateRepairStatus(
       403,
     );
   }
-  if (!canTransition(repair.status, nextStatus)) {
+  const technicianSelection =
+    actor.role === "TECHNICIAN" && technicianStatuses.includes(nextStatus);
+  if (!technicianSelection && !canTransition(repair.status, nextStatus)) {
     throw new AppError(
       `Status cannot change from ${repair.status} to ${nextStatus}`,
       409,

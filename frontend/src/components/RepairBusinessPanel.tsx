@@ -233,12 +233,9 @@ export function RepairBusinessPanel({
 
 async function prepareUploadImage(file: File): Promise<File> {
   const maxBytes = 3.5 * 1024 * 1024;
+  if (file.size <= maxBytes) return file;
   const image = await createImageBitmap(file);
   const scale = Math.min(1, 2048 / Math.max(image.width, image.height));
-  if (scale === 1 && file.size <= maxBytes) {
-    image.close();
-    return file;
-  }
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(image.width * scale));
   canvas.height = Math.max(1, Math.round(image.height * scale));
