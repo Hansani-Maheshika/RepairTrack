@@ -16,7 +16,8 @@ import type { UserRole } from "../utils/jwt.js";
 export const attachmentRouter = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  // Keep multipart requests below Vercel's serverless request-body limit.
+  limits: { fileSize: 4 * 1024 * 1024 },
   fileFilter: (_req, file, cb) =>
     cb(
       null,

@@ -282,7 +282,11 @@ export function NewRepairPage() {
 }
 
 const transitions: Record<RepairStatus, RepairStatus[]> = {
-  DEVICE_RECEIVED: ["UNDER_INSPECTION", "CANCELLED"],
+  DEVICE_RECEIVED: [
+    "UNDER_INSPECTION",
+    "WAITING_FOR_CUSTOMER_APPROVAL",
+    "CANCELLED",
+  ],
   UNDER_INSPECTION: [
     "WAITING_FOR_CUSTOMER_APPROVAL",
     "REPAIR_IN_PROGRESS",
@@ -313,6 +317,15 @@ const transitions: Record<RepairStatus, RepairStatus[]> = {
   CANCELLED: [],
 };
 
+const technicianStatuses: RepairStatus[] = [
+  "DEVICE_RECEIVED",
+  "WAITING_FOR_CUSTOMER_APPROVAL",
+  "WAITING_FOR_SPARE_PARTS",
+  "REPAIR_IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+];
+
 export function RepairDetailsPage() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -339,11 +352,10 @@ export function RepairDetailsPage() {
   if (user?.role === "RECEPTIONIST")
     allowed = allowed.filter((s) => ["CANCELLED", "COLLECTED"].includes(s));
   if (user?.role === "ADMIN") allowed = [];
-  if (
-    user?.role === "TECHNICIAN" &&
-    r.status === "WAITING_FOR_CUSTOMER_APPROVAL"
-  )
-    allowed = [];
+  if (user?.role === "TECHNICIAN") {
+    allowed = allowed.filter((status) => technicianStatuses.includes(status));
+    if (r.status === "WAITING_FOR_CUSTOMER_APPROVAL") allowed = [];
+  }
   async function action(path: string, body: unknown, message: string) {
     setBusy(true);
     try {

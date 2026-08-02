@@ -36,6 +36,7 @@ export function RepairBusinessPanel({
   }, [repairId]);
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [uploading, setUploading] = useState(false);
   async function createQuote(e: FormEvent) {
     e.preventDefault();
     try {
@@ -84,13 +85,22 @@ export function RepairBusinessPanel({
   async function upload(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const target = e.currentTarget;
+    const input = target.elements.namedItem("file") as HTMLInputElement;
+    const selected = input.files?.[0];
+    if (!selected) return;
+    setUploading(true);
     try {
-      await api.post(`/repairs/${repairId}/attachments`, new FormData(target));
+      const file = await prepareUploadImage(selected);
+      const form = new FormData();
+      form.append("file", file, file.name);
+      await api.post(`/repairs/${repairId}/attachments`, form);
       toast.success("File uploaded");
       target.reset();
       await files.reload();
     } catch (e) {
       toast.error(getApiErrorMessage(e));
+    } finally {
+      setUploading(false);
     }
   }
   return (
@@ -175,7 +185,9 @@ export function RepairBusinessPanel({
               accept="image/jpeg,image/png,image/webp"
               className={inputClass}
             />
-            <button className={buttonClass}>Upload</button>
+            <button className={buttonClass} disabled={uploading}>
+              {uploading ? "Uploading…" : "Upload"}
+            </button>
           </form>
         )}
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -217,6 +229,33 @@ export function RepairBusinessPanel({
       {user?.role === "TECHNICIAN" && <PartUsage repairId={repairId} />}
     </div>
   );
+}
+
+async function prepareUploadImage(file: File): Promise<File> {
+  const maxBytes = 3.5 * 1024 * 1024;
+  const image = await createImageBitmap(file);
+  const scale = Math.min(1, 2048 / Math.max(image.width, image.height));
+  if (scale === 1 && file.size <= maxBytes) {
+    image.close();
+    return file;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) {
+    image.close();
+    throw new Error("This browser could not prepare the image");
+  }
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  image.close();
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.82),
+  );
+  if (!blob || blob.size > maxBytes)
+    throw new Error("Please choose a smaller image");
+  const name = file.name.replace(/\.[^.]+$/, "") || "repair-photo";
+  return new File([blob], `${name}.jpg`, { type: "image/jpeg" });
 }
 function PartUsage({ repairId }: { repairId: string }) {
   const parts = useApiQuery(async () => {
