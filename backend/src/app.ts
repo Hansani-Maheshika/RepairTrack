@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import { resolve } from "node:path";
 import * as helmetModule from "helmet";
+import type { HelmetOptions } from "helmet";
 import { pinoHttp } from "pino-http";
 
 import { env } from "./config/env.js";
@@ -22,7 +23,9 @@ import { attachmentRouter } from "./routes/attachment.routes.js";
 import { passwordResetRouter } from "./routes/passwordReset.routes.js";
 
 const app = express();
-const helmet = helmetModule.default;
+const helmet = helmetModule.default as unknown as (
+  options?: Readonly<HelmetOptions>,
+) => express.RequestHandler;
 
 app.disable("x-powered-by");
 if (env.NODE_ENV === "production") app.set("trust proxy", 1);
