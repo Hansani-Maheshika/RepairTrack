@@ -37,7 +37,6 @@ const environmentSchema = z.object({
 }).superRefine((value, context) => {
   if (value.NODE_ENV !== "production") return;
   const required = [
-    ["RESEND_API_KEY", value.RESEND_API_KEY],
     ["CLOUDINARY_CLOUD_NAME", value.CLOUDINARY_CLOUD_NAME],
     ["CLOUDINARY_API_KEY", value.CLOUDINARY_API_KEY],
     ["CLOUDINARY_API_SECRET", value.CLOUDINARY_API_SECRET],
@@ -61,7 +60,10 @@ const environmentSchema = z.object({
     path: ["JWT_REFRESH_SECRET"],
     message: "Access and refresh secrets must be different",
   });
-  if (value.EMAIL_FROM.includes("onboarding@resend.dev")) context.addIssue({
+  if (
+    value.RESEND_API_KEY &&
+    value.EMAIL_FROM.includes("onboarding@resend.dev")
+  ) context.addIssue({
     code: "custom",
     path: ["EMAIL_FROM"],
     message: "EMAIL_FROM must use a verified production sender",

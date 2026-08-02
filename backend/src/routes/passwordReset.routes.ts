@@ -31,6 +31,11 @@ const emailSchema = z
 
 passwordResetRouter.post("/forgot-password", async (req, res, next) => {
   try {
+    if (!env.RESEND_API_KEY)
+      throw new AppError(
+        "Email password recovery is not available. Please contact an administrator.",
+        503,
+      );
     const { email } = z.object({ email: emailSchema }).parse(req.body);
     const user = await prisma.user.findUnique({ where: { email } });
     let developmentCode: string | undefined;
