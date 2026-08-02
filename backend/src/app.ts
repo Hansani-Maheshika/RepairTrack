@@ -20,7 +20,6 @@ import { userRouter } from "./routes/user.routes.js";
 import { notificationRouter } from "./routes/notification.routes.js";
 import { businessRouter } from "./routes/business.routes.js";
 import { attachmentRouter } from "./routes/attachment.routes.js";
-import { passwordResetRouter } from "./routes/passwordReset.routes.js";
 
 const app = express();
 const helmet = helmetModule.default as unknown as (
@@ -92,7 +91,6 @@ app.get("/", (_request, response) => {
 
 app.use("/api/v1", healthRouter);
 app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/auth", passwordResetRouter);
 app.use("/api/v1/customers", customerRouter);
 app.use("/api/v1/dashboard", dashboardRouter);
 app.use("/api/v1/devices", deviceRouter);

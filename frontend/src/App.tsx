@@ -28,7 +28,6 @@ import { StaffPage } from "./pages/staff/StaffPages";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { InventoryPage, InvoicesPage } from "./pages/business/BusinessPages";
 import {
-  ForgotPasswordPage,
   PublicInvoicePage,
   PublicQuotationPage,
 } from "./pages/public/CustomerBusinessPages";
@@ -38,7 +37,6 @@ export default function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/track" element={<TrackRepairPage />} />
       <Route path="/quotation/:token" element={<PublicQuotationPage />} />
       <Route path="/invoice/:token" element={<PublicInvoicePage />} />

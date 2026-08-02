@@ -53,6 +53,6 @@ export function LoginPage() {
         <label className="block"><span className="mb-2 block text-sm font-medium text-slate-700">Email address</span><input className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" type="email" autoComplete="email" {...register('email')} />{errors.email && <span className="mt-1 block text-sm text-red-600">{errors.email.message}</span>}</label>
         <label className="block"><span className="mb-2 block text-sm font-medium text-slate-700">Password</span><input className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" type="password" autoComplete="current-password" {...register('password')} />{errors.password && <span className="mt-1 block text-sm text-red-600">{errors.password.message}</span>}</label>
         <button className="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60" disabled={isSubmitting}>{isSubmitting ? 'Signing in…' : 'Sign in'}</button>
-      </form><Link className="mt-4 block text-center text-sm text-cyan-700 hover:underline" to="/forgot-password">Forgot password?</Link><Link className="mt-3 block text-center text-sm text-cyan-700 hover:underline" to="/">Return to home page</Link></div></section>
+      </form><Link className="mt-4 block text-center text-sm text-cyan-700 hover:underline" to="/">Return to home page</Link></div></section>
   </main>
 }
