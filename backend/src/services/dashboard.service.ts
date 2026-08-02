@@ -12,7 +12,11 @@ export async function getDashboardSummary() {
     prisma.device.count(),
     prisma.repairJob.count(),
     prisma.repairJob.count({ where: { receivedAt: { gte: startOfToday } } }),
-    prisma.repairJob.groupBy({ by: ["status"], _count: { _all: true } }),
+    prisma.repairJob.groupBy({
+      by: ["status"],
+      orderBy: { status: "asc" },
+      _count: true,
+    }),
     prisma.user.findMany({
       where: { role: "TECHNICIAN", isActive: true },
       select: {
@@ -38,7 +42,7 @@ export async function getDashboardSummary() {
     totals: { customers: totalCustomers, devices: totalDevices, repairs: totalRepairs,
       repairsReceivedToday: receivedToday },
     repairsByStatus: repairsByStatus.map((item) => ({
-      status: item.status, count: item._count._all,
+      status: item.status, count: item._count,
     })),
     technicianWorkload: technicianWorkload.map((item) => ({
       id: item.id, staffCode: item.staffCode, fullName: item.fullName,
