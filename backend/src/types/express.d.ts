@@ -9,6 +9,7 @@ declare global {
         fullName: string;
         email: string;
         role: UserRole;
+        mustChangePassword: boolean;
       };
     }
   }

@@ -44,6 +44,61 @@ enum RepairStatus {
   CANCELLED
 }
 
+enum QuotationStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  PAYHERE
+}
+
+enum StockMovementType {
+  PURCHASE
+  USAGE
+  ADJUSTMENT
+  RETURN
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum PartRequestStatus {
+  PENDING
+  FULFILLED
+  REJECTED
+}
+
 model User {
   id           String  @id @default(uuid())
   staffCode    String  @unique
@@ -52,11 +107,19 @@ model User {
   passwordHash String
   role         Role
   isActive     Boolean @default(true)
+  mustChangePassword Boolean @default(false)
 
-  createdRepairs  RepairJob[]           @relation("RepairCreatedBy")
-  assignedRepairs RepairJob[]           @relation("RepairAssignedTechnician")
-  statusUpdates   RepairStatusHistory[] @relation("StatusUpdatedBy")
-  refreshTokens   RefreshToken[]
+  createdRepairs       RepairJob[]           @relation("RepairCreatedBy")
+  assignedRepairs      RepairJob[]           @relation("RepairAssignedTechnician")
+  statusUpdates        RepairStatusHistory[] @relation("StatusUpdatedBy")
+  refreshTokens        RefreshToken[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  partUsages           RepairPartUsage[]
+  attachments          RepairAttachment[]
+  passwordResetTokens  PasswordResetToken[]
+  requestedParts       SparePartRequest[]    @relation("PartRequestedBy")
+  resolvedPartRequests SparePartRequest[]    @relation("PartRequestResolvedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -72,9 +135,12 @@ model Customer {
   phone        String
   email        String?
   address      String?
+  privacyConsentAt DateTime?
 
   devices    Device[]
   repairJobs RepairJob[]
+  quotations Quotation[]
+  invoices   Invoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -132,6 +198,12 @@ model RepairJob {
   assignedTechnician User?    @relation("RepairAssignedTechnician", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
 
   statusHistory RepairStatusHistory[]
+  quotations    Quotation[]
+  invoice       Invoice?
+  partUsages    RepairPartUsage[]
+  attachments   RepairAttachment[]
+  notifications Notification[]
+  partRequests  SparePartRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -182,4 +254,220 @@ model CodeSequence {
   key       String   @id
   value     Int      @default(0)
   updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id                String              @id @default(uuid())
+  userId            String?
+  repairJobId       String?
+  channel           NotificationChannel @default(IN_APP)
+  title             String
+  message           String
+  deliveryStatus    DeliveryStatus      @default(PENDING)
+  providerReference String?
+  failureReason     String?
+  readAt            DateTime?
+  user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repairJob         RepairJob?          @relation(fields: [repairJobId], references: [id], onDelete: Cascade)
+  createdAt         DateTime            @default(now())
+
+  @@index([userId, readAt])
+  @@index([repairJobId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  details    Json?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Quotation {
+  id                   String          @id @default(uuid())
+  quotationNumber      String          @unique
+  repairJobId          String
+  customerId           String
+  status               QuotationStatus @default(DRAFT)
+  subtotal             Decimal         @db.Decimal(12, 2)
+  tax                  Decimal         @default(0) @db.Decimal(12, 2)
+  total                Decimal         @db.Decimal(12, 2)
+  notes                String?
+  validUntil           DateTime?
+  publicTokenHash      String?         @unique
+  publicTokenExpiresAt DateTime?
+  sentAt               DateTime?
+  respondedAt          DateTime?
+  customerResponseNote String?
+  repairJob            RepairJob       @relation(fields: [repairJobId], references: [id], onDelete: Restrict)
+  customer             Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items                QuotationItem[]
+  invoice              Invoice?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@index([repairJobId])
+  @@index([customerId])
+  @@index([status])
+}
+
+model QuotationItem {
+  id          String    @id @default(uuid())
+  quotationId String
+  description String
+  quantity    Int       @default(1)
+  unitPrice   Decimal   @db.Decimal(12, 2)
+  lineTotal   Decimal   @db.Decimal(12, 2)
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@index([quotationId])
+}
+
+model SparePart {
+  id           String             @id @default(uuid())
+  sku          String             @unique
+  name         String
+  description  String?
+  quantity     Int                @default(0)
+  reorderLevel Int                @default(0)
+  unitCost     Decimal            @db.Decimal(12, 2)
+  sellingPrice Decimal            @db.Decimal(12, 2)
+  isActive     Boolean            @default(true)
+  movements    StockMovement[]
+  usages       RepairPartUsage[]
+  requests     SparePartRequest[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([name])
+  @@index([isActive])
+}
+
+model SparePartRequest {
+  id            String            @id @default(uuid())
+  repairJobId   String
+  requestedById String
+  sparePartId   String?
+  partName      String
+  quantity      Int
+  note          String?
+  status        PartRequestStatus @default(PENDING)
+  resolvedById  String?
+  resolvedAt    DateTime?
+  repairJob     RepairJob         @relation(fields: [repairJobId], references: [id], onDelete: Cascade)
+  requestedBy   User              @relation("PartRequestedBy", fields: [requestedById], references: [id], onDelete: Restrict)
+  sparePart     SparePart?        @relation(fields: [sparePartId], references: [id], onDelete: SetNull)
+  resolvedBy    User?             @relation("PartRequestResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([repairJobId])
+  @@index([requestedById, status])
+  @@index([status, createdAt])
+}
+
+model StockMovement {
+  id          String            @id @default(uuid())
+  sparePartId String
+  type        StockMovementType
+  quantity    Int
+  note        String?
+  sparePart   SparePart         @relation(fields: [sparePartId], references: [id], onDelete: Restrict)
+  createdAt   DateTime          @default(now())
+
+  @@index([sparePartId])
+  @@index([createdAt])
+}
+
+model RepairPartUsage {
+  id          String    @id @default(uuid())
+  repairJobId String
+  sparePartId String
+  quantity    Int
+  unitPrice   Decimal   @db.Decimal(12, 2)
+  usedById    String
+  repairJob   RepairJob @relation(fields: [repairJobId], references: [id], onDelete: Restrict)
+  sparePart   SparePart @relation(fields: [sparePartId], references: [id], onDelete: Restrict)
+  usedBy      User      @relation(fields: [usedById], references: [id], onDelete: Restrict)
+  createdAt   DateTime  @default(now())
+
+  @@index([repairJobId])
+  @@index([sparePartId])
+}
+
+model Invoice {
+  id                   String        @id @default(uuid())
+  invoiceNumber        String        @unique
+  repairJobId          String        @unique
+  customerId           String
+  quotationId          String?       @unique
+  subtotal             Decimal       @db.Decimal(12, 2)
+  tax                  Decimal       @default(0) @db.Decimal(12, 2)
+  total                Decimal       @db.Decimal(12, 2)
+  paidAmount           Decimal       @default(0) @db.Decimal(12, 2)
+  balance              Decimal       @db.Decimal(12, 2)
+  status               InvoiceStatus @default(UNPAID)
+  publicTokenHash      String?       @unique
+  publicTokenExpiresAt DateTime?
+  repairJob            RepairJob     @relation(fields: [repairJobId], references: [id], onDelete: Restrict)
+  customer             Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  quotation            Quotation?    @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  payments             Payment[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  invoiceId         String
+  amount            Decimal       @db.Decimal(12, 2)
+  method            PaymentMethod
+  status            PaymentStatus @default(PENDING)
+  providerReference String?       @unique
+  note              String?
+  paidAt            DateTime?
+  invoice           Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  createdAt         DateTime      @default(now())
+
+  @@index([invoiceId])
+  @@index([status])
+}
+
+model RepairAttachment {
+  id           String    @id @default(uuid())
+  repairJobId  String
+  uploadedById String
+  fileName     String
+  mimeType     String
+  size         Int
+  url          String
+  storageKey   String
+  repairJob    RepairJob @relation(fields: [repairJobId], references: [id], onDelete: Cascade)
+  uploadedBy   User      @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  createdAt    DateTime  @default(now())
+
+  @@index([repairJobId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }

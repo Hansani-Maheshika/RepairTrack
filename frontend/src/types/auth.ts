@@ -6,6 +6,7 @@ export interface StaffUser {
   fullName: string
   email: string
   role: UserRole
+  mustChangePassword: boolean
 }
 
 export interface AuthSession {

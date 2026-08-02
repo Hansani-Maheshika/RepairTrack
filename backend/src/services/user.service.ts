@@ -5,7 +5,7 @@ import type { CreateUserInput, UpdateUserInput, UserQuery } from "../validators/
 
 const safeUserSelect = {
   id: true, staffCode: true, fullName: true, email: true, role: true,
-  isActive: true, createdAt: true, updatedAt: true,
+  isActive: true, mustChangePassword: true, createdAt: true, updatedAt: true,
 };
 
 export async function listUsers(query: UserQuery) {
@@ -35,7 +35,11 @@ export async function getUser(id: string) {
 
 export async function createUser(input: CreateUserInput) {
   const { password, ...data } = input;
-  return prisma.user.create({ data: { ...data, passwordHash: await bcrypt.hash(password, 12) },
+  return prisma.user.create({ data: {
+    ...data,
+    passwordHash: await bcrypt.hash(password, 12),
+    mustChangePassword: true,
+  },
     select: safeUserSelect });
 }
 
@@ -57,9 +61,14 @@ export async function updateUser(id: string, input: UpdateUserInput, actorId: st
 export async function resetUserPassword(id: string, password: string) {
   await getUser(id);
   await prisma.$transaction([
-    prisma.user.update({ where: { id }, data: { passwordHash: await bcrypt.hash(password, 12) } }),
+    prisma.user.update({
+      where: { id },
+      data: {
+        passwordHash: await bcrypt.hash(password, 12),
+        mustChangePassword: true,
+      },
+    }),
     prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null },
       data: { revokedAt: new Date() } }),
   ]);
 }
-

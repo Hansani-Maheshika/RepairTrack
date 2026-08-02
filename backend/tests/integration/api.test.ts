@@ -6,12 +6,22 @@ import app from "../../src/app.js";
 import { prisma } from "../../src/config/prisma.js";
 import { createAccessToken } from "../../src/utils/jwt.js";
 
-const integration = describe.runIf(process.env.RUN_INTEGRATION_TESTS === "true");
+const integration = describe.runIf(
+  process.env.RUN_INTEGRATION_TESTS === "true",
+);
 
 integration("RepairTrack API integration", () => {
   const marker = randomUUID().slice(0, 8);
-  const ids: { admin?: string; receptionist?: string; technician?: string;
-    customer?: string; device?: string; repair?: string } = {};
+  const ids: {
+    admin?: string;
+    receptionist?: string;
+    technician?: string;
+    customer?: string;
+    device?: string;
+    repair?: string;
+    invoice?: string;
+    createdStaff?: string;
+  } = {};
   let adminToken = "";
   let receptionistToken = "";
   let technicianToken = "";
@@ -21,26 +31,69 @@ integration("RepairTrack API integration", () => {
   beforeAll(async () => {
     const passwordHash = await bcrypt.hash("IntegrationPass123!", 4);
     const [admin, receptionist, technician] = await Promise.all([
-      prisma.user.create({ data: { staffCode: `TST-A-${marker}`, fullName: "Test Admin",
-        email: `admin-${marker}@test.local`, passwordHash, role: "ADMIN" } }),
-      prisma.user.create({ data: { staffCode: `TST-R-${marker}`, fullName: "Test Receptionist",
-        email: `reception-${marker}@test.local`, passwordHash, role: "RECEPTIONIST" } }),
-      prisma.user.create({ data: { staffCode: `TST-T-${marker}`, fullName: "Test Technician",
-        email: `technician-${marker}@test.local`, passwordHash, role: "TECHNICIAN" } }),
+      prisma.user.create({
+        data: {
+          staffCode: `TST-A-${marker}`,
+          fullName: "Test Admin",
+          email: `admin-${marker}@test.local`,
+          passwordHash,
+          role: "ADMIN",
+        },
+      }),
+      prisma.user.create({
+        data: {
+          staffCode: `TST-R-${marker}`,
+          fullName: "Test Receptionist",
+          email: `reception-${marker}@test.local`,
+          passwordHash,
+          role: "RECEPTIONIST",
+        },
+      }),
+      prisma.user.create({
+        data: {
+          staffCode: `TST-T-${marker}`,
+          fullName: "Test Technician",
+          email: `technician-${marker}@test.local`,
+          passwordHash,
+          role: "TECHNICIAN",
+        },
+      }),
     ]);
-    ids.admin = admin.id; ids.receptionist = receptionist.id; ids.technician = technician.id;
+    ids.admin = admin.id;
+    ids.receptionist = receptionist.id;
+    ids.technician = technician.id;
     adminToken = createAccessToken(admin.id, "ADMIN");
     receptionistToken = createAccessToken(receptionist.id, "RECEPTIONIST");
     technicianToken = createAccessToken(technician.id, "TECHNICIAN");
   });
 
   afterAll(async () => {
-    if (ids.repair) await prisma.repairStatusHistory.deleteMany({ where: { repairJobId: ids.repair } });
-    if (ids.repair) await prisma.repairJob.deleteMany({ where: { id: ids.repair } });
-    if (ids.device) await prisma.device.deleteMany({ where: { id: ids.device } });
-    if (ids.customer) await prisma.customer.deleteMany({ where: { id: ids.customer } });
-    const userIds = [ids.admin, ids.receptionist, ids.technician].filter((id): id is string => Boolean(id));
-    await prisma.refreshToken.deleteMany({ where: { userId: { in: userIds } } });
+    const userIds = [ids.admin, ids.receptionist, ids.technician, ids.createdStaff].filter(
+      (id): id is string => Boolean(id),
+    );
+    await prisma.auditLog.deleteMany({
+      where: {
+        OR: [
+          ...(ids.repair ? [{ entityId: ids.repair }] : []),
+          { actorId: { in: userIds } },
+        ],
+      },
+    });
+    if (ids.repair)
+      await prisma.repairStatusHistory.deleteMany({
+        where: { repairJobId: ids.repair },
+      });
+    if (ids.invoice)
+      await prisma.invoice.deleteMany({ where: { id: ids.invoice } });
+    if (ids.repair)
+      await prisma.repairJob.deleteMany({ where: { id: ids.repair } });
+    if (ids.device)
+      await prisma.device.deleteMany({ where: { id: ids.device } });
+    if (ids.customer)
+      await prisma.customer.deleteMany({ where: { id: ids.customer } });
+    await prisma.refreshToken.deleteMany({
+      where: { userId: { in: userIds } },
+    });
     await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     await prisma.$disconnect();
   });
@@ -48,64 +101,190 @@ integration("RepairTrack API integration", () => {
   it("exposes health but protects staff resources", async () => {
     expect((await request(app).get("/api/v1/health")).status).toBe(200);
     expect((await request(app).get("/api/v1/users")).status).toBe(401);
-    expect((await request(app).get("/api/v1/users").set("Authorization", `Bearer ${receptionistToken}`)).status).toBe(403);
-    expect((await request(app).get("/api/v1/users?role=TECHNICIAN").set("Authorization", `Bearer ${adminToken}`)).status).toBe(200);
+    expect(
+      (
+        await request(app)
+          .get("/api/v1/users")
+          .set("Authorization", `Bearer ${receptionistToken}`)
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .get("/api/v1/users?role=TECHNICIAN")
+          .set("Authorization", `Bearer ${adminToken}`)
+      ).status,
+    ).toBe(200);
   });
 
+  it("forces a newly created staff member to change the temporary password", async () => {
+    const temporaryPassword = "TemporaryPass123!";
+    const newPassword = "ReplacementPass123!";
+    const email = `new-staff-${marker}@test.local`;
+    const created = await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        staffCode: `STF-${Date.now().toString().slice(-6)}`,
+        fullName: "New Test Technician",
+        email,
+        password: temporaryPassword,
+        role: "TECHNICIAN",
+      });
+    expect(created.status).toBe(201);
+    ids.createdStaff = created.body.data.user.id;
+    expect(created.body.data.user.mustChangePassword).toBe(true);
+
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email, password: temporaryPassword });
+    expect(login.status).toBe(200);
+    expect(login.body.data.user.mustChangePassword).toBe(true);
+    const blocked = await request(app)
+      .get("/api/v1/notifications")
+      .set("Authorization", `Bearer ${login.body.data.accessToken}`);
+    expect(blocked.status).toBe(403);
+
+    const changed = await request(app)
+      .patch("/api/v1/auth/password")
+      .set("Authorization", `Bearer ${login.body.data.accessToken}`)
+      .send({ currentPassword: temporaryPassword, newPassword });
+    expect(changed.status).toBe(200);
+
+    const secondLogin = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email, password: newPassword });
+    expect(secondLogin.status).toBe(200);
+    expect(secondLogin.body.data.user.mustChangePassword).toBe(false);
+  }, 15_000);
+
   it("creates and updates a customer and device", async () => {
-    const customerResponse = await request(app).post("/api/v1/customers")
+    const customerResponse = await request(app)
+      .post("/api/v1/customers")
       .set("Authorization", `Bearer ${receptionistToken}`)
-      .send({ name: "Integration Customer", phone, email: `customer-${marker}@test.local` });
+      .send({
+        name: "Integration Customer",
+        phone,
+        email: `customer-${marker}@test.local`,
+        privacyConsent: true,
+      });
     expect(customerResponse.status).toBe(201);
     ids.customer = customerResponse.body.data.customer.id;
-    expect(customerResponse.body.data.customer.customerCode).toMatch(/^CUS-\d{4,}$/);
+    expect(customerResponse.body.data.customer.customerCode).toMatch(
+      /^CUS-\d{4,}$/,
+    );
 
-    const deviceResponse = await request(app).post("/api/v1/devices")
+    const deviceResponse = await request(app)
+      .post("/api/v1/devices")
       .set("Authorization", `Bearer ${receptionistToken}`)
-      .send({ customerId: ids.customer, deviceType: "LAPTOP", brand: "TestBrand", model: "Model 1" });
+      .send({
+        customerId: ids.customer,
+        deviceType: "LAPTOP",
+        brand: "TestBrand",
+        model: "Model 1",
+      });
     expect(deviceResponse.status).toBe(201);
     ids.device = deviceResponse.body.data.device.id;
     expect(deviceResponse.body.data.device.deviceCode).toMatch(/^DEV-\d{4,}$/);
 
-    const updateResponse = await request(app).patch(`/api/v1/devices/${ids.device}`)
-      .set("Authorization", `Bearer ${receptionistToken}`).send({ colour: "Black" });
+    const updateResponse = await request(app)
+      .patch(`/api/v1/devices/${ids.device}`)
+      .set("Authorization", `Bearer ${receptionistToken}`)
+      .send({ colour: "Black" });
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body.data.device.colour).toBe("Black");
 
-    const forbidden = await request(app).get(`/api/v1/customers/${ids.customer}/devices`)
+    const forbidden = await request(app)
+      .get(`/api/v1/customers/${ids.customer}/devices`)
       .set("Authorization", `Bearer ${technicianToken}`);
     expect(forbidden.status).toBe(403);
   });
 
   it("runs assignment, inspection, status, and public tracking workflow", async () => {
-    const createResponse = await request(app).post("/api/v1/repairs")
-      .set("Authorization", `Bearer ${receptionistToken}`).send({
-        customerId: ids.customer, deviceId: ids.device, assignedTechnicianId: ids.technician,
-        reportedProblem: "Device does not power on", priority: "HIGH",
+    const createResponse = await request(app)
+      .post("/api/v1/repairs")
+      .set("Authorization", `Bearer ${receptionistToken}`)
+      .send({
+        customerId: ids.customer,
+        deviceId: ids.device,
+        reportedProblem: "Device does not power on",
+        priority: "HIGH",
       });
     expect(createResponse.status).toBe(201);
     ids.repair = createResponse.body.data.repair.id;
     repairNumber = createResponse.body.data.repair.repairNumber;
 
-    const inspection = await request(app).patch(`/api/v1/repairs/${ids.repair}/inspection`)
+    const assignment = await request(app)
+      .patch(`/api/v1/repairs/${ids.repair}/assign`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ technicianId: ids.technician });
+    expect(assignment.status).toBe(200);
+
+    const inspection = await request(app)
+      .patch(`/api/v1/repairs/${ids.repair}/inspection`)
       .set("Authorization", `Bearer ${technicianToken}`)
-      .send({ inspectionFindings: "Power circuit requires repair", estimatedCost: 2500 });
+      .send({
+        inspectionFindings: "Power circuit requires repair",
+        estimatedCost: 2500,
+      });
     expect(inspection.status).toBe(200);
 
-    const status = await request(app).patch(`/api/v1/repairs/${ids.repair}/status`)
+    const status = await request(app)
+      .patch(`/api/v1/repairs/${ids.repair}/status`)
       .set("Authorization", `Bearer ${technicianToken}`)
-      .send({ status: "UNDER_INSPECTION", publicNote: "Inspection started", internalNote: "Private detail" });
+      .send({
+        status: "UNDER_INSPECTION",
+        publicNote: "Inspection started",
+        internalNote: "Private detail",
+      });
     expect(status.status).toBe(200);
 
-    const invalid = await request(app).patch(`/api/v1/repairs/${ids.repair}/status`)
-      .set("Authorization", `Bearer ${technicianToken}`).send({ status: "COLLECTED" });
+    const invalid = await request(app)
+      .patch(`/api/v1/repairs/${ids.repair}/status`)
+      .set("Authorization", `Bearer ${technicianToken}`)
+      .send({ status: "COLLECTED" });
     expect(invalid.status).toBe(409);
 
-    const tracking = await request(app).post("/api/v1/public/repairs/track")
+    const tracking = await request(app)
+      .post("/api/v1/public/repairs/track")
       .send({ repairNumber, phone });
     expect(tracking.status).toBe(200);
     expect(tracking.body.data.repair.status).toBe("UNDER_INSPECTION");
     expect(JSON.stringify(tracking.body)).not.toContain("Private detail");
   });
-});
 
+  it("blocks collection until the invoice is fully paid", async () => {
+    await prisma.repairJob.update({
+      where: { id: ids.repair },
+      data: { status: "COMPLETED", completedAt: new Date() },
+    });
+    const invoice = await prisma.invoice.create({
+      data: {
+        invoiceNumber: `TST-INV-${marker}`,
+        repairJobId: ids.repair!,
+        customerId: ids.customer!,
+        subtotal: 2500,
+        total: 2500,
+        balance: 2500,
+      },
+    });
+    ids.invoice = invoice.id;
+
+    const unpaid = await request(app)
+      .patch(`/api/v1/repairs/${ids.repair}/status`)
+      .set("Authorization", `Bearer ${receptionistToken}`)
+      .send({ status: "COLLECTED", publicNote: "Device handed over" });
+    expect(unpaid.status).toBe(409);
+
+    await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: { status: "PAID", paidAmount: 2500, balance: 0 },
+    });
+    const paid = await request(app)
+      .patch(`/api/v1/repairs/${ids.repair}/status`)
+      .set("Authorization", `Bearer ${receptionistToken}`)
+      .send({ status: "COLLECTED", publicNote: "Device handed over" });
+    expect(paid.status).toBe(200);
+    expect(paid.body.data.repair.status).toBe("COLLECTED");
+  });
+});

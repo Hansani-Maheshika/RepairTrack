@@ -1,10 +1,10 @@
 # RepairTrack
 
-RepairTrack is a TypeScript/Express/PostgreSQL API for managing customers, devices, repair jobs, staff workflows, and public repair tracking.
+RepairTrack is a full-stack repair-centre system built with React, TypeScript, Express, Prisma and PostgreSQL.
 
-## Backend setup
+## Run locally
 
-Requirements: Node.js 22+, npm, and PostgreSQL 15+.
+Requirements: Node.js 22+, npm and PostgreSQL 15+.
 
 ```powershell
 cd backend
@@ -12,14 +12,11 @@ Copy-Item .env.example .env
 npm ci
 npx prisma migrate deploy
 npm run seed
+npm run seed:demo
 npm run dev
 ```
 
-Set a secure `SEED_USER_PASSWORD` before seeding. The seed creates admin, receptionist, and technician accounts using the emails in `prisma/seed.ts`. The API listens on `http://localhost:5000`; health checks are `/api/v1/health` and `/api/v1/health/database`.
-
-Alternatively, set secure secrets in `docker-compose.yml` and run `docker compose up --build`.
-
-## Frontend setup
+In a second terminal:
 
 ```powershell
 cd frontend
@@ -28,67 +25,52 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173`. Set `VITE_API_URL` to the running backend API, for example `http://localhost:5001/api/v1`.
+Open `http://localhost:5174`. RepairTrack intentionally uses port 5174 so another project can keep port 5173. The API normally runs at `http://localhost:5001`; use the actual `PORT` in `backend/.env`. A JSON `Route not found: GET /` response at the API root is normal—use `/api/v1/health` or open the frontend.
 
-The completed MVP frontend includes role-based login and navigation, customer and device management, repair intake and status history, technician assignments and inspections, public tracking, staff administration, and the admin dashboard. Quotations, inventory, invoices, and payments are future modules because they are not part of the current API/database schema.
+Set `SEED_USER_PASSWORD` in `backend/.env` to a password of your choice before `npm run seed`. The three development accounts are `admin@repairtrack.local`, `receptionist@repairtrack.local`, and `technician@repairtrack.local`, all using that password. Never commit `.env`.
 
-Security note: npm currently reports a React Router advisory for RSC/server-action mode. RepairTrack is a client-only Vite SPA and does not use that mode; keep the router updated when a patched release is published.
+## Real-world workflow and permissions
 
-## Commands
+1. Receptionist creates the customer, device and repair. Admins receive an in-app notification.
+2. Admin assigns an active technician. That technician receives a notification.
+3. Technician records inspection findings, progresses technical statuses and records used parts.
+4. Receptionist creates and sends a quotation. The customer opens its secure link without an account and approves or rejects it.
+5. After repair completion, reception creates the invoice. The customer views it and pays at the counter.
+6. Technician repairs, tests and marks the device ready. Receptionists receive a notification.
+7. Reception records full payment, hands over the device and marks it collected. Collection is blocked until the invoice is fully paid.
 
-- `npm run dev` — development server
-- `npm run typecheck` — Prisma generation and TypeScript checking
-- `npm test` — fast unit tests
-- `npm run test:integration` — real PostgreSQL API integration tests
-- `npm run build` / `npm start` — production build and server
-- `npm run seed` — create/update the three initial staff accounts
-- `npm run seed:demo` — safely create reusable sample customers, devices and repairs
-- `npm run tokens:cleanup` — remove expired and revoked refresh sessions
-- `npx prisma migrate deploy` — apply committed database migrations
+Admins manage staff, technician assignments, inventory stock and audit logs. Receptionists manage customer-facing intake, quotations, payments and collection, and can view part availability. Technicians only access assigned repair work, view inventory and record parts used. Customers do not need a login; tokenized quotation/invoice links and public tracking are used.
 
-Frontend verification commands are `npm run lint`, `npm test`, and `npm run build` from the `frontend` folder.
+## Added business modules
 
-Use a separate database in `DATABASE_URL` when running integration tests outside CI.
+- In-app notifications with read/unread state
+- Quotations with line items, customer approval/rejection and expiring public links
+- Spare-parts inventory, stock adjustments and repair usage
+- Invoices and receptionist-recorded counter payments
+- Email through Resend and SMS through Notify.lk
+- JPEG, PNG and WebP repair images with content-signature validation (maximum 5 MB); Cloudinary is mandatory in production
+- Staff password recovery on the login page using a hashed, expiring, single-use six-digit verification code; no reset link or dashboard password section is used
+- Technician spare-part requests with admin notifications, stock replenishment, request resolution and automatic inventory reduction when parts are used
+- Audit logs for important business operations
 
-## Authentication and roles
+External services are optional only for local development. Production startup requires Resend email, Cloudinary storage, HTTPS client/API URLs and separate strong JWT secrets. Without Resend, the development password-reset screen displays the verification code. Without Cloudinary, development uploads are saved under `backend/uploads`.
 
-Login returns a short-lived bearer access token and stores a rotating refresh token in an HTTP-only cookie. Send protected requests with `Authorization: Bearer <token>`.
+## Important routes
 
-- `ADMIN`: staff management, dashboard, and all repair operations
-- `RECEPTIONIST`: customers, devices, repair intake/assignment, and collection statuses
-- `TECHNICIAN`: only repairs assigned to that technician, including inspection and technical statuses
-- Public customers: tracking only, using repair number and phone number
+- Authentication: `/api/v1/auth/*`, `/api/v1/password/*`
+- Repairs: `/api/v1/repairs/*`; assignment is admin-only, inspection technician-only
+- Notifications: `/api/v1/notifications`
+- Quotations: `/api/v1/repairs/:id/quotations`, `/api/v1/quotations/:id/send`
+- Inventory: `/api/v1/inventory`, `/api/v1/repairs/:id/parts`
+- Invoices/payments: `/api/v1/invoices`, `/api/v1/invoices/:id/payments`
+- Attachments: `/api/v1/repairs/:id/attachments`
+- Public tracking/quotation/invoice: `/api/v1/public/*`
+- Admin audit log: `/api/v1/audit-logs`
 
-## API summary
+## Verification
 
-All routes are under `/api/v1`.
+Backend: `npm run typecheck`, `npm test`, `npm run test:integration`, and `npm run build`.
 
-| Method | Route | Access |
-|---|---|---|
-| GET | `/health`, `/health/database` | Public |
-| POST | `/auth/login`, `/auth/refresh`, `/auth/logout` | Public/session |
-| GET | `/auth/me` | Staff |
-| PATCH | `/auth/password` | Staff |
-| GET/POST | `/users` | Admin |
-| GET | `/users/technicians` | Admin, receptionist |
-| GET/PATCH | `/users/:id` | Admin |
-| PATCH | `/users/:id/password` | Admin |
-| GET/POST | `/customers` | Admin, receptionist |
-| GET/PATCH | `/customers/:id` | Admin, receptionist |
-| GET | `/customers/:id/devices` | Admin, receptionist |
-| GET/POST | `/devices` | Admin, receptionist |
-| GET/PATCH | `/devices/:id` | Admin, receptionist |
-| GET | `/repairs`, `/repairs/:id` | Staff; technicians see assigned work only |
-| GET | `/repairs/my-assigned` | Technician |
-| POST/PATCH | `/repairs`, `/repairs/:id` | Admin, receptionist |
-| PATCH | `/repairs/:id/assign` | Admin, receptionist |
-| PATCH | `/repairs/:id/inspection` | Admin, assigned technician |
-| PATCH | `/repairs/:id/status` | Staff subject to workflow/role rules |
-| GET | `/dashboard/summary` | Admin |
-| POST | `/public/repairs/track` | Public, rate-limited |
+Frontend: `npm run lint`, `npm test`, and `npm run build`.
 
-Successful responses use `{ success, message, data }`. Errors use `{ success: false, message, errors }`. Validation errors include field paths.
-
-## Repair workflow
-
-The normal flow is `DEVICE_RECEIVED → UNDER_INSPECTION → WAITING_FOR_CUSTOMER_APPROVAL → REPAIR_APPROVED → REPAIR_IN_PROGRESS → TESTING → READY_FOR_COLLECTION → COMPLETED → COLLECTED`. Waiting-for-parts, rejection, and cancellation branches are enforced by `src/utils/statusTransitions.ts`; collected and cancelled repairs are terminal.
+The Docker alternative is `docker compose up --build`; production values must be supplied rather than committed. See `docs/staging-and-production.md`, `docs/manual-acceptance-test.md`, and `docs/privacy-and-retention.md` before deployment.

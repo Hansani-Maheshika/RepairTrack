@@ -19,6 +19,7 @@ interface SafeUser {
   fullName: string;
   email: string;
   role: UserRole;
+  mustChangePassword: boolean;
 }
 
 interface AuthSession {
@@ -40,6 +41,7 @@ function createSafeUser(user: {
   fullName: string;
   email: string;
   role: string;
+  mustChangePassword: boolean;
 }): SafeUser {
   return {
     id: user.id,
@@ -47,6 +49,7 @@ function createSafeUser(user: {
     fullName: user.fullName,
     email: user.email,
     role: user.role as UserRole,
+    mustChangePassword: user.mustChangePassword,
   };
 }
 
@@ -232,6 +235,7 @@ export async function getCurrentStaff(
       email: true,
       role: true,
       isActive: true,
+      mustChangePassword: true,
     },
   });
 
@@ -253,7 +257,10 @@ export async function changeStaffPassword(userId: string, input: ChangePasswordI
   }
   const passwordHash = await bcrypt.hash(input.newPassword, 12);
   await prisma.$transaction([
-    prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+    prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: false },
+    }),
     prisma.refreshToken.updateMany({ where: { userId, revokedAt: null },
       data: { revokedAt: new Date() } }),
   ]);

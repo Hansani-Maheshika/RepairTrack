@@ -18,9 +18,13 @@ export const createCustomerSchema = z.object({
   phone: z.string().trim().min(7).max(20),
   email: z.string().trim().email().max(254).optional().nullable(),
   address: optionalText(500),
+  privacyConsent: z.literal(true, {
+    error: "Customer consent is required before storing personal information",
+  }),
 });
 
 export const updateCustomerSchema = createCustomerSchema
+  .omit({ privacyConsent: true })
   .partial()
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field must be supplied",

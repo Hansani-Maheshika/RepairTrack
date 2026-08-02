@@ -46,6 +46,7 @@ export async function authenticate(
         email: true,
         role: true,
         isActive: true,
+        mustChangePassword: true,
       },
     });
 
@@ -62,7 +63,18 @@ export async function authenticate(
       fullName: user.fullName,
       email: user.email,
       role: user.role as UserRole,
+      mustChangePassword: user.mustChangePassword,
     };
+
+    const passwordChangeAllowed =
+      request.originalUrl.startsWith("/api/v1/auth/password") ||
+      request.originalUrl.startsWith("/api/v1/auth/me");
+    if (user.mustChangePassword && !passwordChangeAllowed) {
+      throw new AppError(
+        "You must change the temporary password before using the staff system",
+        403,
+      );
+    }
 
     next();
   } catch (error) {

@@ -20,7 +20,8 @@ import { changePasswordSchema } from "../validators/auth.validator.js";
 const refreshCookieOptions: CookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === "production",
-  sameSite: "lax",
+  sameSite: env.COOKIE_SAME_SITE,
+  domain: env.COOKIE_DOMAIN || undefined,
   path: "/api/v1/auth",
 };
 

@@ -8,10 +8,11 @@ import { Prisma } from "../generated/prisma/client.js";
 
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
+import { reportServerError } from "../services/errorMonitoring.service.js";
 
 export function errorHandler(
   error: unknown,
-  _request: Request,
+  request: Request,
   response: Response,
   next: NextFunction,
 ): void {
@@ -57,9 +58,13 @@ export function errorHandler(
     return;
   }
 
-  if (env.NODE_ENV !== "production") {
-    console.error(error);
-  }
+  request.log.error({ err: error }, "Unhandled request error");
+  void reportServerError({
+    requestId: request.id === undefined ? undefined : String(request.id),
+    method: request.method,
+    path: request.path,
+    error,
+  });
 
   response.status(500).json({
     success: false,

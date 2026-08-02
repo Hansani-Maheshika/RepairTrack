@@ -47,7 +47,10 @@ export async function nextCustomerCode(): Promise<string> {
 }
 
 export function insertCustomer(input: CreateCustomerInput, customerCode: string) {
-  return prisma.customer.create({ data: { ...input, customerCode } });
+  const { privacyConsent: _privacyConsent, ...customer } = input;
+  return prisma.customer.create({
+    data: { ...customer, customerCode, privacyConsentAt: new Date() },
+  });
 }
 
 export function patchCustomer(id: string, input: UpdateCustomerInput) {

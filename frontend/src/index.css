@@ -12,3 +12,56 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, select, textarea { font: inherit; }
+
+/* Staff dashboard dark theme. Public pages keep their own branded colours. */
+.staff-theme-dark,
+.staff-theme-dark.bg-slate-100 {
+  color: #e2e8f0;
+  background-color: #020617;
+  color-scheme: dark;
+}
+
+.staff-theme-dark .bg-white {
+  background-color: #0f172a;
+}
+
+.staff-theme-dark .bg-slate-50,
+.staff-theme-dark .bg-slate-100 {
+  background-color: #1e293b;
+}
+
+.staff-theme-dark .text-slate-950,
+.staff-theme-dark .text-slate-900,
+.staff-theme-dark .text-slate-800,
+.staff-theme-dark .text-slate-700 {
+  color: #f1f5f9;
+}
+
+.staff-theme-dark .text-slate-600,
+.staff-theme-dark .text-slate-500 {
+  color: #94a3b8;
+}
+
+.staff-theme-dark .border-slate-100,
+.staff-theme-dark .border-slate-200,
+.staff-theme-dark .border-slate-300,
+.staff-theme-dark .border-slate-400 {
+  border-color: #334155;
+}
+
+.staff-theme-dark input,
+.staff-theme-dark select,
+.staff-theme-dark textarea {
+  color: #f1f5f9;
+  background-color: #0f172a;
+  border-color: #475569;
+}
+
+.staff-theme-dark input::placeholder,
+.staff-theme-dark textarea::placeholder {
+  color: #64748b;
+}
+
+.staff-theme-dark tbody tr:hover {
+  background-color: #1e293b;
+}

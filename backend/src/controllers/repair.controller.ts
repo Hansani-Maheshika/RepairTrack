@@ -39,7 +39,7 @@ export async function createRepairController(req: Request, res: Response, next: 
 export async function assignRepairController(req: Request, res: Response, next: NextFunction) {
   try { const { id } = uuidParamsSchema.parse(req.params);
     res.json({ success: true, message: "Technician assignment updated successfully",
-      data: { repair: await assignRepair(id, assignRepairSchema.parse(req.body)) } }); }
+      data: { repair: await assignRepair(id, assignRepairSchema.parse(req.body), actor(req).id) } }); }
   catch (error) { next(error); }
 }
 export async function inspectionController(req: Request, res: Response, next: NextFunction) {

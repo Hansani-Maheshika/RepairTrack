@@ -16,6 +16,8 @@ npm-debug.log*
 
 # Generated Prisma Client
 backend/src/generated/prisma/
+backend/uploads/
+backups/
 
 # Operating system files
 .DS_Store
